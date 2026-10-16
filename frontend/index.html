@@ -1,12 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
+
 <head>
-    <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>LimbusLangManager</title>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Limbus Company - Language Manager</title>
+    <link rel="stylesheet" href="./src/style.css" />
 </head>
+
 <body>
-<div id="app"></div>
-<script src="./src/main.js" type="module"></script>
+    <div class="container">
+        <header>
+            <h1>LIMBUS COMPANY <span>// LANG MANAGER</span></h1>
+        </header>
+
+        <section class="path-card">
+            <div class="path-info">
+                <span class="label">DOSSIER DU JEU (STEAM)</span>
+                <code id="game-path-display">Recherche en cours...</code>
+            </div>
+            <button id="btn-change-path" class="btn secondary">Parcourir...</button>
+        </section>
+
+        <section class="packs-section">
+            <div class="section-header">
+                <h2>PACKS DE TRADUCTION DISPONIBLES</h2>
+                <button id="btn-refresh" class="btn secondary small">Rafraîchir les versions</button>
+            </div>
+            <div id="packs-list" class="packs-grid">
+            </div>
+        </section>
+
+        <footer id="status-bar">
+            Prêt.
+        </footer>
+    </div>
+
+    <script src="./src/main.js" type="module"></script>
 </body>
+
 </html>

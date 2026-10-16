@@ -36,6 +36,18 @@ func (a *App) startup(ctx context.Context) {
 	}
 }
 
+func (a *App) GetConfig() *config.AppConfig {
+	return a.cfg
+}
+
+func (a *App) CheckRemoteVersion(repo string) (string, error) {
+	release, err := updater.GetLatestRelease(repo)
+	if err != nil {
+		return "", err
+	}
+	return release.TagName, nil
+}
+
 func (a *App) SelectGamePathManual() (string, error) {
 	selection, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Sélectionnez le dossier de Limbus Company",
