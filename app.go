@@ -176,3 +176,7 @@ func (a *App) RemoveEmptySubdirs(dir string) error {
 	}
 	return nil
 }
+
+func (a *App) LaunchGame() {
+	runtime.BrowserOpenURL(a.ctx, "steam://rungameid/1973530")
+}

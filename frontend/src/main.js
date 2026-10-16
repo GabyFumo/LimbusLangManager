@@ -3,7 +3,8 @@ import {
     SelectGamePathManual,
     InstallOrUpdatePack,
     RemovePack,
-    CheckRemoteVersion
+    CheckRemoteVersion,
+    LaunchGame
 } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 
@@ -11,14 +12,38 @@ const AVAILABLE_PACKS = [
     {
         id: "fr-pack",
         name: "Traduction Française",
-        author: "Équipe FR",
+        author: "Eden-Office",
         repo: "Eden-Office/LimbusCompanyBusFR"
     },
     {
         id: "es-pack",
         name: "Traducción al Español",
-        author: "Comunidad ES",
+        author: "Dreams-Office",
         repo: "Dreams-Office/LimbusCompanySpanishTranslationTeam"
+    },
+    {
+        id: "ru-pack",
+        name: "Русская локализация",
+        author: "Crescent-Corporation",
+        repo: "Crescent-Corporation/LimbusCompanyBusRUS"
+    },
+    {
+        id: 'th-pack',
+        name: "การแปลภาษาไทย",
+        author: "stlinx",
+        repo: "stlinx/LocalizeLimbusTH",
+    },
+    {
+        id: 'cn-pack',
+        name: '简体中文',
+        author: 'LocalizeLimbusCompany',
+        repo: 'LocalizeLimbusCompany/LocalizeLimbusCompany',
+    },
+    {
+        id: 'tc-pack',
+        name: '繁體中文',
+        author: 'LimbusTraditionalMandarin',
+        repo: 'LimbusTraditionalMandarin/storyline',
     }
 ];
 
@@ -188,5 +213,10 @@ document.getElementById('btn-change-path').addEventListener('click', async () =>
 });
 
 document.getElementById('btn-refresh').addEventListener('click', fetchAllRemoteVersions);
+
+document.getElementById('btn-launch-game').addEventListener('click', async () => {
+    setStatus("Démarrage de Limbus Company via Steam...");
+    await LaunchGame();
+});
 
 window.addEventListener('DOMContentLoaded', init);

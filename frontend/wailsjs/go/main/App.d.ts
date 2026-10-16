@@ -8,6 +8,8 @@ export function GetConfig():Promise<config.AppConfig>;
 
 export function InstallOrUpdatePack(arg1:string,arg2:string):Promise<string>;
 
+export function LaunchGame():Promise<void>;
+
 export function RemoveEmptyFolders():Promise<void>;
 
 export function RemoveEmptySubdirs(arg1:string):Promise<void>;

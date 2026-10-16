@@ -14,6 +14,10 @@ export function InstallOrUpdatePack(arg1, arg2) {
   return window['go']['main']['App']['InstallOrUpdatePack'](arg1, arg2);
 }
 
+export function LaunchGame() {
+  return window['go']['main']['App']['LaunchGame']();
+}
+
 export function RemoveEmptyFolders() {
   return window['go']['main']['App']['RemoveEmptyFolders']();
 }

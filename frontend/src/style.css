@@ -214,3 +214,26 @@ footer#status-bar {
     color: var(--accent-gold);
     text-align: right;
 }
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.launch-btn {
+    background: linear-gradient(135deg, var(--accent-red), #6e1010);
+    border: 1px solid var(--accent-gold);
+    color: #fff;
+    padding: 10px 22px;
+    font-size: 0.95rem;
+    letter-spacing: 1.5px;
+    box-shadow: 0 0 12px rgba(158, 27, 27, 0.4);
+}
+
+.launch-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--accent-red-hover), var(--accent-red));
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.5);
+}
