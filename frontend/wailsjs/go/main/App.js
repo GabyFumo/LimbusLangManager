@@ -14,6 +14,14 @@ export function InstallOrUpdatePack(arg1, arg2) {
   return window['go']['main']['App']['InstallOrUpdatePack'](arg1, arg2);
 }
 
+export function RemoveEmptyFolders() {
+  return window['go']['main']['App']['RemoveEmptyFolders']();
+}
+
+export function RemoveEmptySubdirs(arg1) {
+  return window['go']['main']['App']['RemoveEmptySubdirs'](arg1);
+}
+
 export function RemovePack(arg1) {
   return window['go']['main']['App']['RemovePack'](arg1);
 }

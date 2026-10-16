@@ -52,6 +52,10 @@ func DownloadAndExtract(downloadURL, destDir string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("erreur lors du téléchargement : statut HTTP %d", resp.StatusCode)
+	}
+
 	tmpFile, err := os.CreateTemp("", "langpack-*.zip")
 	if err != nil {
 		return nil, err
@@ -68,6 +72,49 @@ func DownloadAndExtract(downloadURL, destDir string) ([]string, error) {
 	return unzip(tmpPath, destDir)
 }
 
+func findLangPrefix(files []*zip.File) string {
+	candidateCounts := make(map[string]int)
+
+	for _, f := range files {
+		cleanName := strings.ReplaceAll(f.Name, "\\", "/")
+		cleanName = strings.TrimPrefix(cleanName, "/")
+		if strings.HasPrefix(cleanName, "__MACOSX/") {
+			continue
+		}
+
+		parts := strings.Split(cleanName, "/")
+		for i, part := range parts {
+			if strings.EqualFold(part, "lang") {
+				isDir := (i < len(parts)-1) || f.FileInfo().IsDir() || strings.HasSuffix(f.Name, "/") || strings.HasSuffix(f.Name, "\\")
+				if isDir {
+					prefix := strings.Join(parts[:i+1], "/") + "/"
+					candidateCounts[prefix]++
+					break
+				}
+			}
+		}
+	}
+
+	if len(candidateCounts) == 0 {
+		return ""
+	}
+
+	bestPrefix := ""
+	bestDepth := 999999
+	bestCount := -1
+
+	for prefix, count := range candidateCounts {
+		depth := strings.Count(prefix, "/")
+		if depth < bestDepth || (depth == bestDepth && count > bestCount) {
+			bestPrefix = prefix
+			bestDepth = depth
+			bestCount = count
+		}
+	}
+
+	return bestPrefix
+}
+
 func unzip(src, dest string) ([]string, error) {
 	var extractedFiles []string
 
@@ -77,23 +124,58 @@ func unzip(src, dest string) ([]string, error) {
 	}
 	defer r.Close()
 
+	langPrefix := findLangPrefix(r.File)
+	if langPrefix == "" {
+		return nil, errors.New("dossier 'Lang' introuvable dans l'archive")
+	}
+
+	if err := os.MkdirAll(dest, os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	cleanDest := filepath.Clean(dest)
+	destPrefix := cleanDest + string(os.PathSeparator)
+	lowerLangPrefix := strings.ToLower(langPrefix)
+
 	for _, f := range r.File {
-		fpath := filepath.Join(dest, f.Name)
+		cleanName := strings.ReplaceAll(f.Name, "\\", "/")
+		cleanName = strings.TrimPrefix(cleanName, "/")
+		lowerName := strings.ToLower(cleanName)
 
-		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
-			return nil, errors.New("chemin de fichier illégal dans l'archive")
-		}
-
-		if f.FileInfo().IsDir() {
-			os.MkdirAll(fpath, os.ModePerm)
+		if strings.HasPrefix(cleanName, "__MACOSX/") || !strings.HasPrefix(lowerName, lowerLangPrefix) {
 			continue
 		}
 
-		if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
+		relPath := cleanName[len(langPrefix):]
+		relPath = strings.TrimPrefix(relPath, "/")
+		if relPath == "" {
+			continue
+		}
+
+		targetPath := filepath.Join(dest, filepath.FromSlash(relPath))
+
+		cleanTarget := filepath.Clean(targetPath)
+		if !strings.HasPrefix(cleanTarget, destPrefix) && cleanTarget != cleanDest {
+			return nil, errors.New("chemin de fichier illégal dans l'archive")
+		}
+
+		if f.FileInfo().IsDir() || strings.HasSuffix(cleanName, "/") {
+			if err := os.MkdirAll(targetPath, os.ModePerm); err != nil {
+				return nil, err
+			}
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(targetPath), os.ModePerm); err != nil {
 			return nil, err
 		}
 
-		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		mode := f.Mode()
+		if mode&0200 == 0 {
+			mode |= 0644
+		}
+
+		outFile, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +193,8 @@ func unzip(src, dest string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		extractedFiles = append(extractedFiles, fpath)
+		extractedFiles = append(extractedFiles, targetPath)
 	}
+
 	return extractedFiles, nil
 }

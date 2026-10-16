@@ -117,5 +117,50 @@ func (a *App) RemovePack(packID string) error {
 	}
 
 	delete(a.cfg.InstalledPacks, packID)
-	return a.cfg.Save()
+	a.cfg.Save()
+	return a.RemoveEmptyFolders()
+}
+
+func (a *App) RemoveEmptyFolders() error {
+	if a.cfg == nil || a.cfg.GamePath == "" {
+		return nil
+	}
+	langDir := filepath.Join(a.cfg.GamePath, "LimbusCompany_Data", "Lang")
+	if _, err := os.Stat(langDir); os.IsNotExist(err) {
+		return nil
+	}
+
+	return a.RemoveEmptySubdirs(langDir)
+}
+
+func (a *App) RemoveEmptySubdirs(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			subPath := filepath.Join(dir, entry.Name())
+			if err := a.RemoveEmptySubdirs(subPath); err != nil {
+				return err
+			}
+			subEntries, err := os.ReadDir(subPath)
+			if err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
+				return err
+			}
+			if len(subEntries) == 0 {
+				if err := os.Remove(subPath); err != nil && !os.IsNotExist(err) {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
