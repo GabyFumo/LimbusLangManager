@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"LimbusLangManager/internal/config"
 	"LimbusLangManager/internal/steam"
@@ -79,13 +78,7 @@ func (a *App) InstallOrUpdatePack(packID, repo string) (string, error) {
 		return "Déjà à jour (" + release.TagName + ")", nil
 	}
 
-	var zipURL string
-	for _, asset := range release.Assets {
-		if strings.HasSuffix(strings.ToLower(asset.Name), ".zip") {
-			zipURL = asset.BrowserDownloadURL
-			break
-		}
-	}
+	zipURL := release.DownloadURL
 	if zipURL == "" {
 		return "", errors.New("aucun fichier .zip trouvé dans cette release GitHub")
 	}

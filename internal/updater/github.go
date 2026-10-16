@@ -2,22 +2,20 @@ package updater
 
 import (
 	"archive/zip"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"regexp"
 )
 
 type ReleaseInfo struct {
-	TagName string `json:"tag_name"`
-	Assets  []struct {
-		Name               string `json:"name"`
-		BrowserDownloadURL string `json:"browser_download_url"`
-	} `json:"assets"`
+	TagName     string
+	DownloadURL string
 }
 
 type progressReader struct {
@@ -34,7 +32,6 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 
 	if pr.total > 0 && pr.onProgress != nil {
 		percent := int(float64(pr.downloaded) / float64(pr.total) * 100)
-		// On n'envoie l'événement que si le palier de 1% a avancé
 		if percent > pr.lastPercent {
 			pr.lastPercent = percent
 			pr.onProgress(percent)
@@ -44,28 +41,56 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 }
 
 func GetLatestRelease(repo string) (*ReleaseInfo, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
-	req, err := http.NewRequest("GET", url, nil)
+	latestURL := fmt.Sprintf("https://github.com/%s/releases/latest", repo)
+	req, err := http.NewRequest("GET", latestURL, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "LimbusLangManager-App")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("erreur API GitHub: statut %d", resp.StatusCode)
+	finalURL := resp.Request.URL.String()
+	parts := strings.Split(finalURL, "/tag/")
+	if len(parts) < 2 {
+		return nil, errors.New("aucune release trouvée sur ce dépôt GitHub")
 	}
+	tagName := parts[1]
 
-	var info ReleaseInfo
-	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+	assetsURL := fmt.Sprintf("https://github.com/%s/releases/expanded_assets/%s", repo, tagName)
+	reqAssets, err := http.NewRequest("GET", assetsURL, nil)
+	if err != nil {
 		return nil, err
 	}
-	return &info, nil
+	reqAssets.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+
+	respAssets, err := http.DefaultClient.Do(reqAssets)
+	if err != nil {
+		return nil, err
+	}
+	defer respAssets.Body.Close()
+
+	bodyBytes, err := io.ReadAll(respAssets.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	re := regexp.MustCompile(`href="(/[^"]+/releases/download/[^"]+\.zip)"`)
+	match := re.FindStringSubmatch(string(bodyBytes))
+	if len(match) < 2 {
+		return nil, errors.New("aucun fichier .zip trouvé dans la dernière release")
+	}
+
+	downloadURL := "https://github.com" + match[1]
+
+	return &ReleaseInfo{
+		TagName:     tagName,
+		DownloadURL: downloadURL,
+	}, nil
 }
 
 func DownloadAndExtract(downloadURL, destDir string, onProgress func(int)) ([]string, error) {
@@ -99,7 +124,26 @@ func DownloadAndExtract(downloadURL, destDir string, onProgress func(int)) ([]st
 	}
 	tmpFile.Close()
 
-	return unzip(tmpPath, destDir)
+	archiveName := getArchiveName(downloadURL)
+	return unzip(tmpPath, destDir, archiveName)
+}
+
+func getArchiveName(downloadURL string) string {
+	parsed, err := url.Parse(downloadURL)
+	var filename string
+	if err == nil {
+		filename = filepath.Base(parsed.Path)
+	} else {
+		filename = filepath.Base(downloadURL)
+	}
+	if idx := strings.Index(filename, "?"); idx != -1 {
+		filename = filename[:idx]
+	}
+	name := strings.TrimSuffix(filename, filepath.Ext(filename))
+	if name == "" || name == "." || name == "/" {
+		return "langpack"
+	}
+	return name
 }
 
 func findLangPrefix(files []*zip.File) string {
@@ -145,7 +189,7 @@ func findLangPrefix(files []*zip.File) string {
 	return bestPrefix
 }
 
-func unzip(src, dest string) ([]string, error) {
+func unzip(src, dest, archiveName string) ([]string, error) {
 	var extractedFiles []string
 
 	r, err := zip.OpenReader(src)
@@ -154,35 +198,89 @@ func unzip(src, dest string) ([]string, error) {
 	}
 	defer r.Close()
 
-	langPrefix := findLangPrefix(r.File)
-	if langPrefix == "" {
-		return nil, errors.New("dossier 'Lang' introuvable dans l'archive")
+	if archiveName == "" {
+		base := filepath.Base(src)
+		archiveName = strings.TrimSuffix(base, filepath.Ext(base))
 	}
 
-	if err := os.MkdirAll(dest, os.ModePerm); err != nil {
+	langPrefix := findLangPrefix(r.File)
+	lowerLangPrefix := strings.ToLower(langPrefix)
+
+	// Scan items to count how many top-level directories will be extracted
+	topLevelDirs := make(map[string]bool)
+	for _, f := range r.File {
+		cleanName := strings.ReplaceAll(f.Name, "\\", "/")
+		cleanName = strings.TrimPrefix(cleanName, "/")
+		lowerName := strings.ToLower(cleanName)
+
+		if strings.HasPrefix(cleanName, "__MACOSX/") {
+			continue
+		}
+
+		var relPath string
+		if langPrefix != "" {
+			if !strings.HasPrefix(lowerName, lowerLangPrefix) {
+				continue
+			}
+			relPath = cleanName[len(langPrefix):]
+		} else {
+			relPath = cleanName
+		}
+
+		relPath = strings.TrimPrefix(relPath, "/")
+		if relPath == "" {
+			continue
+		}
+
+		parts := strings.Split(relPath, "/")
+		topSegment := strings.TrimSpace(parts[0])
+		if topSegment == "" || topSegment == "." {
+			continue
+		}
+
+		isDir := len(parts) > 1 || f.FileInfo().IsDir() || strings.HasSuffix(cleanName, "/")
+		if isDir {
+			topLevelDirs[strings.ToLower(topSegment)] = true
+		}
+	}
+
+	finalDest := dest
+	if len(topLevelDirs) > 1 && archiveName != "" {
+		finalDest = filepath.Join(dest, archiveName)
+	}
+
+	if err := os.MkdirAll(finalDest, os.ModePerm); err != nil {
 		return nil, err
 	}
 
-	cleanDest := filepath.Clean(dest)
+	cleanDest := filepath.Clean(finalDest)
 	destPrefix := cleanDest + string(os.PathSeparator)
-	lowerLangPrefix := strings.ToLower(langPrefix)
 
 	for _, f := range r.File {
 		cleanName := strings.ReplaceAll(f.Name, "\\", "/")
 		cleanName = strings.TrimPrefix(cleanName, "/")
 		lowerName := strings.ToLower(cleanName)
 
-		if strings.HasPrefix(cleanName, "__MACOSX/") || !strings.HasPrefix(lowerName, lowerLangPrefix) {
+		if strings.HasPrefix(cleanName, "__MACOSX/") {
 			continue
 		}
 
-		relPath := cleanName[len(langPrefix):]
+		var relPath string
+		if langPrefix != "" {
+			if !strings.HasPrefix(lowerName, lowerLangPrefix) {
+				continue
+			}
+			relPath = cleanName[len(langPrefix):]
+		} else {
+			relPath = cleanName
+		}
+
 		relPath = strings.TrimPrefix(relPath, "/")
 		if relPath == "" {
 			continue
 		}
 
-		targetPath := filepath.Join(dest, filepath.FromSlash(relPath))
+		targetPath := filepath.Join(finalDest, filepath.FromSlash(relPath))
 
 		cleanTarget := filepath.Clean(targetPath)
 		if !strings.HasPrefix(cleanTarget, destPrefix) && cleanTarget != cleanDest {
