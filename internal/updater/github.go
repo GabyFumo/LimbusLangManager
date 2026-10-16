@@ -20,6 +20,29 @@ type ReleaseInfo struct {
 	} `json:"assets"`
 }
 
+type progressReader struct {
+	reader      io.Reader
+	total       int64
+	downloaded  int64
+	lastPercent int
+	onProgress  func(percent int)
+}
+
+func (pr *progressReader) Read(p []byte) (int, error) {
+	n, err := pr.reader.Read(p)
+	pr.downloaded += int64(n)
+
+	if pr.total > 0 && pr.onProgress != nil {
+		percent := int(float64(pr.downloaded) / float64(pr.total) * 100)
+		// On n'envoie l'événement que si le palier de 1% a avancé
+		if percent > pr.lastPercent {
+			pr.lastPercent = percent
+			pr.onProgress(percent)
+		}
+	}
+	return n, err
+}
+
 func GetLatestRelease(repo string) (*ReleaseInfo, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 	req, err := http.NewRequest("GET", url, nil)
@@ -45,7 +68,7 @@ func GetLatestRelease(repo string) (*ReleaseInfo, error) {
 	return &info, nil
 }
 
-func DownloadAndExtract(downloadURL, destDir string) ([]string, error) {
+func DownloadAndExtract(downloadURL, destDir string, onProgress func(int)) ([]string, error) {
 	resp, err := http.Get(downloadURL)
 	if err != nil {
 		return nil, err
@@ -63,7 +86,14 @@ func DownloadAndExtract(downloadURL, destDir string) ([]string, error) {
 	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
 
-	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
+	pr := &progressReader{
+		reader:      resp.Body,
+		total:       resp.ContentLength,
+		lastPercent: -1,
+		onProgress:  onProgress,
+	}
+
+	if _, err := io.Copy(tmpFile, pr); err != nil {
 		tmpFile.Close()
 		return nil, err
 	}

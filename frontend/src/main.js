@@ -5,6 +5,7 @@ import {
     RemovePack,
     CheckRemoteVersion
 } from '../wailsjs/go/main/App';
+import { EventsOn } from '../wailsjs/runtime/runtime';
 
 const AVAILABLE_PACKS = [
     {
@@ -39,6 +40,24 @@ async function init() {
         updatePathUI();
         renderPacks();
         await fetchAllRemoteVersions();
+        EventsOn("download:progress", (data) => {
+            const wrapper = document.getElementById(`progress-wrap-${data.packId}`);
+            const fill = document.getElementById(`progress-fill-${data.packId}`);
+            const label = document.getElementById(`progress-label-${data.packId}`);
+
+            if (!wrapper || !fill || !label) return;
+
+            if (data.stage === "downloading") {
+                wrapper.classList.add('active');
+                fill.style.width = `${data.percent}%`;
+                label.textContent = data.percent === 100
+                    ? "Extraction de l'archive ZIP..."
+                    : `Téléchargement : ${data.percent}%`;
+            } else if (data.stage === "done") {
+                wrapper.classList.remove('active');
+                fill.style.width = '0%';
+            }
+        });
     } catch (err) {
         setStatus(`Erreur d'initialisation : ${err}`, true);
     }
@@ -86,21 +105,29 @@ function renderPacks() {
         const card = document.createElement('div');
         card.className = 'pack-card';
         card.innerHTML = `
-            <div class="pack-details">
-                <h3>${pack.name}</h3>
-                <div class="pack-meta">
-                    <span>Dépôt : ${pack.repo}</span>
-                    <span>Installé : <strong>${localVer}</strong></span>
-                    <span class="${hasUpdate ? 'badge-update' : ''}">
-                        GitHub : ${remoteVer} ${hasUpdate ? '(MàJ disponible !)' : ''}
-                    </span>
+            <div class="pack-row">
+                <div class="pack-details">
+                    <h3>${pack.name}</h3>
+                    <div class="pack-meta">
+                        <span>Dépôt : ${pack.repo}</span>
+                        <span>Installé : <strong>${localVer}</strong></span>
+                        <span class="${hasUpdate ? 'badge-update' : ''}">
+                            GitHub : ${remoteVer} ${hasUpdate ? '(MàJ disponible !)' : ''}
+                        </span>
+                    </div>
+                </div>
+                <div class="pack-actions">
+                    <button class="btn btn-install" data-id="${pack.id}" data-repo="${pack.repo}">
+                        ${actionLabel}
+                    </button>
+                    ${installed ? `<button class="btn danger btn-remove" data-id="${pack.id}">Supprimer</button>` : ''}
                 </div>
             </div>
-            <div class="pack-actions">
-                <button class="btn btn-install" data-id="${pack.id}" data-repo="${pack.repo}">
-                    ${actionLabel}
-                </button>
-                ${installed ? `<button class="btn danger btn-remove" data-id="${pack.id}">Supprimer</button>` : ''}
+            <div id="progress-wrap-${pack.id}" class="progress-wrapper">
+                <div class="progress-track">
+                    <div id="progress-fill-${pack.id}" class="progress-fill"></div>
+                </div>
+                <span id="progress-label-${pack.id}" class="progress-label">0%</span>
             </div>
         `;
         packsList.appendChild(card);

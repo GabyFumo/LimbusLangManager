@@ -91,10 +91,22 @@ func (a *App) InstallOrUpdatePack(packID, repo string) (string, error) {
 	}
 
 	destDir := filepath.Join(a.cfg.GamePath, "LimbusCompany_Data", "Lang")
-	files, err := updater.DownloadAndExtract(zipURL, destDir)
+	files, err := updater.DownloadAndExtract(zipURL, destDir, func(percent int) {
+		runtime.EventsEmit(a.ctx, "download:progress", map[string]interface{}{
+			"packId":  packID,
+			"percent": percent,
+			"stage":   "downloading",
+		})
+	})
 	if err != nil {
 		return "", err
 	}
+
+	runtime.EventsEmit(a.ctx, "download:progress", map[string]interface{}{
+		"packId":  packID,
+		"percent": 100,
+		"stage":   "done",
+	})
 
 	a.cfg.InstalledPacks[packID] = config.PackData{
 		Repo:           repo,
