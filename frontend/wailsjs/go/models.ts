@@ -18,6 +18,7 @@ export namespace config {
 	}
 	export class AppConfig {
 	    game_path: string;
+	    app_lang: string;
 	    installed_packs: Record<string, PackData>;
 	
 	    static createFrom(source: any = {}) {
@@ -27,6 +28,7 @@ export namespace config {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.game_path = source["game_path"];
+	        this.app_lang = source["app_lang"];
 	        this.installed_packs = this.convertValues(source["installed_packs"], PackData, true);
 	    }
 	

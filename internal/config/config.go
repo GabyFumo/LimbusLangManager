@@ -13,6 +13,7 @@ type PackData struct {
 
 type AppConfig struct {
 	GamePath       string              `json:"game_path"`
+	AppLang        string              `json:"app_lang"`
 	InstalledPacks map[string]PackData `json:"installed_packs"`
 }
 
@@ -20,6 +21,7 @@ const configFile = "config.json"
 
 func Load() (*AppConfig, error) {
 	cfg := &AppConfig{
+		AppLang:        "en",
 		InstalledPacks: make(map[string]PackData),
 	}
 
@@ -32,6 +34,9 @@ func Load() (*AppConfig, error) {
 	}
 
 	err = json.Unmarshal(data, cfg)
+	if cfg.AppLang == "" {
+		cfg.AppLang = "en"
+	}
 	return cfg, err
 }
 

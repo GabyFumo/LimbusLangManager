@@ -39,6 +39,11 @@ func (a *App) GetConfig() *config.AppConfig {
 	return a.cfg
 }
 
+func (a *App) SetAppLanguage(lang string) error {
+	a.cfg.AppLang = lang
+	return a.cfg.Save()
+}
+
 func (a *App) CheckRemoteVersion(repo string) (string, error) {
 	release, err := updater.GetLatestRelease(repo)
 	if err != nil {
