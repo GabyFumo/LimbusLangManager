@@ -237,3 +237,23 @@ footer#status-bar {
     background: linear-gradient(135deg, var(--accent-red-hover), var(--accent-red));
     box-shadow: 0 0 16px rgba(212, 175, 55, 0.5);
 }
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.lang-select {
+    background: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    outline: none;
+}
+
+.lang-select:focus {
+    border-color: var(--accent-gold);
+}

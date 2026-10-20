@@ -33,3 +33,7 @@ export function RemovePack(arg1) {
 export function SelectGamePathManual() {
   return window['go']['main']['App']['SelectGamePathManual']();
 }
+
+export function SetAppLanguage(arg1) {
+  return window['go']['main']['App']['SetAppLanguage'](arg1);
+}

@@ -17,3 +17,5 @@ export function RemoveEmptySubdirs(arg1:string):Promise<void>;
 export function RemovePack(arg1:string):Promise<void>;
 
 export function SelectGamePathManual():Promise<string>;
+
+export function SetAppLanguage(arg1:string):Promise<void>;

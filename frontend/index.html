@@ -1,43 +1,43 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+        <title>Limbus Company - Language Manager</title>
+        <link rel="stylesheet" href="./src/style.css" />
+    </head>
+    <body>
+        <div class="container">
+            <header class="app-header">
+                <h1>LIMBUS COMPANY <span data-i18n="header_sub">// LANG MANAGER</span></h1>
+                <div class="header-actions">
+                    <select id="lang-select" class="lang-select">
+                        <option value="en">EN - English</option>
+                        <option value="fr">FR - Français</option>
+                    </select>
+                    <button id="btn-launch-game" class="btn launch-btn" data-i18n="launch_game">▶ LAUNCH GAME</button>
+                </div>
+            </header>
 
-<head>
-    <meta charset="UTF-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Limbus Company - Language Manager</title>
-    <link rel="stylesheet" href="./src/style.css" />
-</head>
+            <section class="path-card">
+                <div class="path-info">
+                    <span class="label" data-i18n="game_folder_label">GAME FOLDER (STEAM)</span>
+                    <code id="game-path-display">...</code>
+                </div>
+                <button id="btn-change-path" class="btn secondary" data-i18n="browse_btn">Browse...</button>
+            </section>
 
-<body>
-    <div class="container">
-        <header class="app-header">
-            <h1>LIMBUS COMPANY <span>// LANG MANAGER</span></h1>
-            <button id="btn-launch-game" class="btn launch-btn">▶ LANCER LE JEU</button>
-        </header>
+            <section class="packs-section">
+                <div class="section-header">
+                    <h2 data-i18n="available_packs_title">AVAILABLE TRANSLATION PACKS</h2>
+                    <button id="btn-refresh" class="btn secondary small" data-i18n="refresh_btn">Refresh versions</button>
+                </div>
+                <div id="packs-list" class="packs-grid"></div>
+            </section>
 
-        <section class="path-card">
-            <div class="path-info">
-                <span class="label">DOSSIER DU JEU (STEAM)</span>
-                <code id="game-path-display">Recherche en cours...</code>
-            </div>
-            <button id="btn-change-path" class="btn secondary">Parcourir...</button>
-        </section>
+            <footer id="status-bar">Ready.</footer>
+        </div>
 
-        <section class="packs-section">
-            <div class="section-header">
-                <h2>PACKS DE TRADUCTION DISPONIBLES</h2>
-                <button id="btn-refresh" class="btn secondary small">Rafraîchir les versions</button>
-            </div>
-            <div id="packs-list" class="packs-grid">
-            </div>
-        </section>
-
-        <footer id="status-bar">
-            Prêt.
-        </footer>
-    </div>
-
-    <script src="./src/main.js" type="module"></script>
-</body>
-
+        <script src="./src/main.js" type="module"></script>
+    </body>
 </html>
